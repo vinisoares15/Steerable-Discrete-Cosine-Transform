@@ -15,7 +15,7 @@ save m.dat a -ascii %saving matriz in a file
 
 %----------------------------------------------SDCT na componente
 
-%Perform WaterMarking
+%Perform WaterMarking.
 
 %RGB content of the image
 %Im = Im(:,:,1);
