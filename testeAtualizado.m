@@ -2,7 +2,7 @@
 close all
 clear all
 Im = imread('boat.tiff'); %reading image of 512x512 pixels
-figure, imshow(Im/255); %displaying image (Figura 1)
+figure, imshow(Im); %displaying image (Figura 1)
 
 y = Im; %storing image in another variable
 
@@ -13,9 +13,9 @@ figure, imshow(a); %displaying watermark (Figura 2)
 
 save m.dat a -ascii %saving matriz in a file
 
-%----------------------------------------------SDCT na componente
+%----------------------------------------------
 
-%Perform WaterMarking.
+%Perform SDCT
 
 %RGB content of the image
 %Im = Im(:,:,1);
@@ -23,28 +23,32 @@ save m.dat a -ascii %saving matriz in a file
 %Perform dct on each RGB component and storing in a different variable
 %sdctx1 = dct2(Im); dx11 = dx1 ;
 
-%Im = imread('boat.tiff');  %ler a imagem de entrada
+Im = imread('boat.tiff');  %ler a imagem de entrada
 N  = 8;        % tamanho dos blocos
-if (size(Im,3)==3) %...This tells us that my image (an array of numbers), is 420 pixels high and 560 pixels across, 
-                        %and contains 3 pages, one for each of R, G and B. It is worth noting that the syntax
+if (size(Im,3)==3)
         %Transformar a imagem RGB em cinza
     Im = rgb2gray(Im);     
 end
 
 figure(1);
-imagesc(Im);
+%imagesc(Im);
 
 tam   = size(Im);
 i_aux = (tam(1)/N) - 1;
 j_aux = (tam(2)/N) - 1;
 
+%Número de ângulos
 num_ang  = (N^2 - N)/2;
 
+%A imagem possui valores inteiros, convertemos para double
 Im = double(Im);
 
+%Ângulos de rotação (aleatório)
 theta    = 2*pi*rand(num_ang,1);
-M_sdct   = matriz_sdct(theta, N, num_ang);
 
+%Matriz de rotação:
+M_sdct   = matriz_sdct(theta, N, num_ang);
+%Blk --- Bloco
 for i = 0 : i_aux
     i_ant = i*N + 1;
     i_dps = i_ant + N - 1;
@@ -58,32 +62,34 @@ for i = 0 : i_aux
         I_dct       = dct2(Blk);
         I_dct_vec   = vetorizar(I_dct);
 
-
-
+%Produto da matriz de rotação com a dct vetorizada
         I_sdct_vec  = M_sdct*I_dct_vec;
 
+%resultado é I_sdct
         I_sdct(i_ant:i_dps, j_ant:j_dps)= vetorTOmatriz(I_sdct_vec, N);
 
     end
 end
 
+imshow(I_sdct);
 imagesc(Im)
+imagesc(I_sdct);
 
-dx1 = Im; dx11 = dx1;
+dx1 = I_sdct; dx11 = dx1;
 
-%----------------------------------------------- Adicionando Marca dágua na componente
+%-----------------------------------------------
 
 load m.dat %binary mark for watermarking. Loading the matriz from the file that I created
 g = 100; %coeeficient of watermark's strength (Cox call it alpha parameter)
 %As the size of g gets bigger, the watermarking gets stronger, but if this value is too big, the image will be deteriorated
 
-[rm, cm] = size(m); %rows and columns of the matriz 300x500
+[rm, cm] = size(m); %rows and columns of the matriz 512x512
 
 dx1(1:rm,1:cm) = dx1(1:rm,1:cm) + g*m; %adding the watermark to the image by adding the coefficient g to the image
 
 figure, imshow(dx1); %displaying each component of the image after watermarking (Figura 3)
 
-%----------------------------------------------- Inversa da componente 
+%-----------------------------------------------Início da Inversa
 
 
 for i = 0 : i_aux
@@ -97,7 +103,7 @@ for i = 0 : i_aux
         Blk   = I_sdct(i_ant:i_dps, j_ant:j_dps); 
         
         I_sdct_vec = vetorizar(Blk);
-
+%transposta vezes a I SDCT vetorizada
         I_sdct_vec_inversa = M_sdct'*I_sdct_vec;
         
         I_sdct_blk_inversa = vetorTOmatriz(I_sdct_vec_inversa, N);
@@ -107,22 +113,34 @@ for i = 0 : i_aux
     end
 end
 
-
+%Métricas----------------------------------
+%Erro médio quadrático: (uint8 - Transformar em inteiro)
 MSE  = immse(uint8(Im), uint8(I_sdct_inversa));
+%Índice de similaridade estrutural entre a original e a inversa:
 SSIM = ssim(Im, I_sdct_inversa);
-
+%-------------------------------------------
 
 figure(2);
-imagesc(I_sdct_inversa);
+figure, imagesc(I_sdct_inversa);
+figure, imshow(I_sdct_inversa);
 
 
-%---------------------------------------------Inserir inversa da componente na imagem completa
+%---------------------------------------------Fim da Inversa
+
+pctImage = imabsdiff(Im, I_sdct_inversa) ./ double(Im);
+meanPct = mean2(pctImage); %difference percentual
 
 y1 = I_sdct_inversa;
 
 y(:,:,1) = y1; %assigning the inverse on an image component
 
-figure, imshow(y); %imagem final com a componente já inserida
+%%%figure, imshow(y);
+
+figure, imshowpair(y1,Im,"diff")
+
+
+%Imagem já deve estar com a marca d'água a partir daqui. Nos próximos
+%passos deve ser feito a retirada da marca d'água.
 
 
 
@@ -169,12 +187,7 @@ figure, imshow(y); %imagem final com a componente já inserida
 
 
 
-
-
-
-
-
-%------------------------------FUnçÔES
+%------------------------------Funções
 
 function M = matriz_sdct(theta, N, num_ang)
 M = eye(N^2, N^2);  %matriz identidade para os coeff's que n�o s�o rotacionados
