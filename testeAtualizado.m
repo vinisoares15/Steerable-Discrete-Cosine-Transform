@@ -2,14 +2,15 @@
 close all
 clear all
 Im = imread('boat.tiff'); %reading image of 512x512 pixels
-figure, imshow(Im); %displaying image (Figura 1)
+figure('Name','Imagem Original'), imshow(Im); %displaying image (Figura 1)
 
 y = Im; %storing image in another variable
 
 a = zeros(512,512); %the size of the matriz depends on the size of the image that im reading
-a(100:250,100:350) = 1;
+%a(100:250,100:350) = 1;
+a(100:300,100:400) = 1;
 
-figure, imshow(a); %displaying watermark (Figura 2)
+figure('Name','MarcaDágua'), imshow(a); %displaying watermark (Figura 2)
 
 save m.dat a -ascii %saving matriz in a file
 
@@ -30,8 +31,9 @@ if (size(Im,3)==3)
     Im = rgb2gray(Im);     
 end
 
-figure(1);
-%imagesc(Im);
+f1 = figure(1);
+f1 = figure('Name', 'Imagem principal');
+imagesc(Im);
 
 tam   = size(Im);
 i_aux = (tam(1)/N) - 1;
@@ -71,26 +73,28 @@ for i = 0 : i_aux
     end
 end
 
-imshow(I_sdct);
-imagesc(Im)
-imagesc(I_sdct);
+% imshow(I_sdct);
+% imagesc(Im)
+% imagesc(I_sdct);
 
 dx1 = I_sdct; dx11 = dx1;
 
 %-----------------------------------------------
 
 load m.dat %binary mark for watermarking. Loading the matriz from the file that I created
-g = 100; %coeeficient of watermark's strength (Cox call it alpha parameter)
+g = 20; %coeeficient of watermark's strength (Cox call it alpha parameter)
 %As the size of g gets bigger, the watermarking gets stronger, but if this value is too big, the image will be deteriorated
 
 [rm, cm] = size(m); %rows and columns of the matriz 512x512
 
 dx1(1:rm,1:cm) = dx1(1:rm,1:cm) + g*m; %adding the watermark to the image by adding the coefficient g to the image
 
-figure, imshow(dx1); %displaying each component of the image after watermarking (Figura 3)
+figure('Name','Componente com Marca dágua'), imshow(dx1); %displaying each component of the image after watermarking (Figura 3)
 
 %-----------------------------------------------Início da Inversa
-
+%-------------ESSA PARTE PRECISA RECEBER O VALOR DE DX1 E NÃO DE I_SDCT
+%JUSTAMENTE PQ DX1 JÁ POSSUI A MARCA D'ÁGUA INSERIDA. FAZER A INVERSA SÓ
+%VAI MOSTRAR O VALOR INICIAL SE N FOR TROCADO PRA DX1.
 
 for i = 0 : i_aux
     i_ant = i*N + 1;
@@ -100,7 +104,7 @@ for i = 0 : i_aux
         j_ant = j*N + 1;
         j_dps = j_ant + N -1;
         
-        Blk   = I_sdct(i_ant:i_dps, j_ant:j_dps); 
+        Blk   = dx1(i_ant:i_dps, j_ant:j_dps); %troquei I_SDCT por dx1
         
         I_sdct_vec = vetorizar(Blk);
 %transposta vezes a I SDCT vetorizada
@@ -121,8 +125,8 @@ SSIM = ssim(Im, I_sdct_inversa);
 %-------------------------------------------
 
 figure(2);
-figure, imagesc(I_sdct_inversa);
-figure, imshow(I_sdct_inversa);
+figure('Name','Inversa já com marca dágua'), imagesc(I_sdct_inversa);
+figure('Name','Imagem Binária'), imshow(I_sdct_inversa);
 
 
 %---------------------------------------------Fim da Inversa
@@ -136,7 +140,7 @@ y(:,:,1) = y1; %assigning the inverse on an image component
 
 %%%figure, imshow(y);
 
-figure, imshowpair(y1,Im,"diff")
+figure('Name','Diferenças entre Im e y1'), imshowpair(y1,Im,"diff")
 
 
 %Imagem já deve estar com a marca d'água a partir daqui. Nos próximos
